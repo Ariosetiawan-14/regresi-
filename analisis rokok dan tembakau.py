@@ -10,7 +10,7 @@ from scipy.stats import shapiro
 # 1. MEMBACA DATASET
 # Ganti 'Dataset_100_Regresi_IHK_Rokok_Sulteng (1).csv' sesuai dengan path file kamu jika dijalankan lokal
 file_path = 'Dataset_100_Regresi_IHK_Rokok_Sulteng (1).csv'
-df = pd.read_csv(file_path, sep=';')
+df = pd.read_csv(file_path, sep=";")
 
 print("--- Informasi Dataset ---")
 print(df.info())
@@ -88,3 +88,21 @@ plt.grid(True)
 plt.tight_layout()
 plt.savefig('hasil_analisis_regresi.png', dpi=300)
 plt.show()
+
+import pandas as pd
+
+# Baca file CSV walaupun ada format yang kurang rapi
+df = pd.read_csv(
+    "Dataset_100_Regresi_IHK_Rokok_Sulteng (1).csv",
+    engine="python",
+    on_bad_lines="skip"
+)
+
+# Hapus kolom kosong
+df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+
+# Simpan hasil yang sudah rapi
+df.to_csv("Dataset_Rapi.csv", index=False)
+
+print(df.head())
+print("Dataset berhasil dirapikan dan disimpan sebagai Dataset_Rapi.csv")
