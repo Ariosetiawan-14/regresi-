@@ -1,0 +1,90 @@
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import seaborn as sns
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import statsmodels.stats.api as sms
+from scipy.stats import shapiro
+
+# 1. MEMBACA DATASET
+# Ganti 'Dataset_100_Regresi_IHK_Rokok_Sulteng (1).csv' sesuai dengan path file kamu jika dijalankan lokal
+file_path = 'Dataset_100_Regresi_IHK_Rokok_Sulteng (1).csv'
+df = pd.read_csv(file_path, sep=";")
+
+print("--- Informasi Dataset ---")
+print(df.info())
+print("\n--- 5 Data Pertama ---")
+print(df.head())
+
+# 2. MENENTUKAN VARIABEL
+X = df[['IHK_Umum_X1', 'NTP_Perkebunan_Rakyat_X2']] # Variabel Bebas
+Y = df['IHK_Rokok_Tembakau_Y']                       # Variabel Terikat
+
+# Menambahkan konstanta (intersep) untuk model regresi
+X_with_const = sm.add_constant(X)
+
+# 3. MEMBUAT DAN MENCOCOKKAN MODEL OLS (Ordinary Least Squares)
+model = sm.OLS(Y, X_with_const).fit()
+
+print("\n" + "="*60)
+print("HASIL RINGKASAN REGRESI LINEAR BERGANDA")
+print("="*60)
+print(model.summary())
+
+# 4. UJI ASUMSI KLASIK
+print("\n" + "="*60)
+print("HASIL UJI ASUMSI KLASIK")
+print("="*60)
+
+# A. Uji Multikolinearitas (VIF)
+vif_data = pd.DataFrame()
+vif_data["Variabel"] = X_with_const.columns
+vif_data["VIF"] = [variance_inflation_factor(X_with_const.values, i) for i in range(len(X_with_const.columns))]
+print("\n[1] Uji Multikolinearitas (Nilai VIF sebaiknya < 10):")
+print(vif_data.iloc[1:]) # Menyembunyikan baris konstanta agar fokus ke variabel X
+
+# B. Uji Normalitas Residu (Shapiro-Wilk)
+residuals = model.resid
+shapiro_test = shapiro(residuals)
+print(f"\n[2] Uji Normalitas Residu (Shapiro-Wilk):")
+print(f"    - Statistik: {shapiro_test.statistic:.4f}")
+print(f"    - p-value: {shapiro_test.pvalue:.4f}")
+print(f"    - Kesimpulan: {'Residu Berdistribusi Normal' if shapiro_test.pvalue > 0.05 else 'Residu TIDAK Berdistribusi Normal (Perlu perhatian)'}")
+
+# C. Uji Heteroskedastisitas (Uji Breusch-Pagan)
+bp_test = sms.het_breuschpagan(residuals, X_with_const)
+print(f"\n[3] Uji Heteroskedastisitas (Breusch-Pagan):")
+print(f"    - p-value: {bp_test[1]:.4f}")
+print(f"    - Kesimpulan: {'Homoskedastisitas (Aman)' if bp_test[1] > 0.05 else 'Terjadi Heteroskedastisitas'}")
+
+# D. Uji Autokorelasi (Durbin-Watson)
+dw_value = sm.stats.durbin_watson(residuals)
+print(f"\n[4] Uji Autokorelasi (Durbin-Watson):")
+print(f"    - Nilai Durbin-Watson: {dw_value:.4f}")
+print("    - Catatan: Nilai di sekitar 2.0 menunjukkan tidak ada autokorelasi serius.")
+
+# 5. VISUALISASI GRAFIK EVALUASI
+plt.figure(figsize=(14, 5))
+
+# Grafik 1: Aktual vs Prediksi
+plt.subplot(1, 2, 1)
+plt.scatter(Y, model.fittedvalues, color='blue', alpha=0.6, edgecolors='k')
+plt.plot([Y.min(), Y.max()], [Y.min(), Y.max()], 'r--', lw=2)
+plt.title('Grafik Aktual vs Nilai Prediksi IHK Rokok')
+plt.xlabel('Nilai Aktual (Y)')
+plt.ylabel('Nilai Prediksi ($\hat{Y}$)')
+plt.grid(True)
+
+# Grafik 2: Residual Plot untuk melihat Heteroskedastisitas
+plt.subplot(1, 2, 2)
+plt.scatter(model.fittedvalues, residuals, color='purple', alpha=0.6, edgecolors='k')
+plt.axhline(y=0, color='r', linestyle='--')
+plt.title('Residual Plot (Cek Heteroskedastisitas)')
+plt.xlabel('Nilai Prediksi')
+plt.ylabel('Residuals')
+plt.grid(True)
+
+plt.tight_layout()
+plt.savefig('hasil_analisis_regresi.png', dpi=300)
+plt.show()
